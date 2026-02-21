@@ -1,0 +1,66 @@
+# =========================
+# Archivos generados por Quartus
+# =========================
+
+# Bases de datos de compilación
+db/
+incremental_db/
+
+# Archivos de salida
+output_files/
+
+# Archivos temporales de Qsys / Platform Designer
+.qsys_edit/
+*.qsys_edit/
+
+# Archivos de compilación automática
+*.rpt
+*.summary
+*.smsg
+*.chg
+*.qws
+*.jdi
+*.sof
+*.pof
+*.jam
+*.jbc
+*.ekp
+*.eqn
+*.pin
+*.done
+*.fit
+*.html
+*.log
+
+# Archivos de simulación generados
+simulation/
+*.vcd
+*.wlf
+*.vwf
+*.do
+
+# ModelSim / Questa
+transcript
+vsim.wlf
+work/
+modelsim.ini
+
+# Archivos de backup
+*.bak
+*~
+
+# Archivos temporales de sistema
+.DS_Store
+Thumbs.db
+
+# =========================
+# NO ignorar estos archivos
+# =========================
+# (Estos deben subirse al repo)
+#
+# *.vhd
+# *.vhdl
+# *.qpf
+# *.qsf
+# *.sdc
+# *.qsys
