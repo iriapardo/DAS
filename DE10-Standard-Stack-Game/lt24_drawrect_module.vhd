@@ -7,8 +7,8 @@ entity lcd_drawrect is
 		reset, clk: in std_logic;
 		rect_x: in unsigned (7 downto 0);
 		rect_y: in unsigned (8 downto 0);
-		rect_w: in unsigned (6 downto 0);
-		rect_h: in unsigned (4 downto 0);
+		rect_w: in unsigned (7 downto 0);
+		rect_h: in unsigned (8 downto 0);
 		rect_rgb: in unsigned (15 downto 0);
 		rect_draw: in std_logic;
 		ctrl_done_cursor: in std_logic;
@@ -29,13 +29,13 @@ end lcd_drawrect;
 architecture arch_lcd_drawrect of lcd_drawrect is 
 	signal r_rect_x: unsigned (7 downto 0);
 	signal r_rect_y: unsigned (8 downto 0);
-	signal r_rect_w: unsigned (6 downto 0);
-	signal r_rect_h: unsigned (4 downto 0);
+	signal r_rect_w: unsigned (7 downto 0);
+	signal r_rect_h: unsigned (8 downto 0);
 	signal r_rect_rgb: unsigned (15 downto 0);
 
 	signal incr: std_logic;
 	signal done_cont: std_logic;
-	signal cont_value: unsigned (4 downto 0);
+	signal cont_value: unsigned (8 downto 0);
 
 	type estado is (e0,e1,e2,e3,e4);
 	signal epres, esig: estado;
@@ -95,13 +95,13 @@ begin
 
 -- SUMADOR Y_ROW
 
-	y_row <= r_rect_y + ("0000"&cont_value);
+	y_row <= r_rect_y + cont_value;
 
 	x_col <= r_rect_x;
 	
 	rgb_colour <= r_rect_rgb;
 
-	rect_numpix <= x"00"&"00"&r_rect_w;
+	rect_numpix <= x"00"&"0"&r_rect_w;
 	
 	done_rect <= done_cont;
 
