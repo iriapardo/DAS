@@ -149,7 +149,7 @@ begin
 		end if;
 	end process;
 
-	process (epres, lcd_init_done, op_setcursor, op_drawcolour, end_pix, q_dat)
+process (epres, lcd_init_done, op_setcursor, op_drawcolour, end_pix, q_dat)
 	begin 
 		case (epres) is 
 			when e0 => if lcd_init_done='1' then 

@@ -9,7 +9,7 @@ entity FIFO_queue is
 
         -- Operaciones (pulso de 1 ciclo)
         enqueue      : in  std_logic;
-        enqueue_data : in  std_logic_vector(40 downto 0);
+        enqueue_data : in  std_logic_vector(49 downto 0);
         dequeue      : in  std_logic;
 
         view_set_tail : in std_logic;
@@ -22,7 +22,7 @@ entity FIFO_queue is
         count : out unsigned(3 downto 0);
 
         -- Salida lectura
-        view_data       : out std_logic_vector(40 downto 0);
+        view_data       : out std_logic_vector(49 downto 0);
         view_data_valid : out std_logic
     );
 end entity;
@@ -36,10 +36,10 @@ architecture rtl of FIFO_queue is
         port(
             address : in  std_logic_vector(4 downto 0);
             clock   : in  std_logic;
-            data    : in  std_logic_vector(40 downto 0);
+            data    : in  std_logic_vector(49 downto 0);
             rden    : in  std_logic;
             wren    : in  std_logic;
-            q       : out std_logic_vector(40 downto 0)
+            q       : out std_logic_vector(49 downto 0)
         );
     end component;
 
@@ -51,10 +51,10 @@ architecture rtl of FIFO_queue is
 
     -- RAM
     signal ram_addr : std_logic_vector(4 downto 0) := (others => '0');
-    signal ram_data : std_logic_vector(40 downto 0) := (others => '0');
+    signal ram_data : std_logic_vector(49 downto 0) := (others => '0');
     signal ram_wren : std_logic := '0';
     signal ram_rden : std_logic := '0';
-    signal ram_q    : std_logic_vector(40 downto 0);
+    signal ram_q    : std_logic_vector(49 downto 0);
 
     signal view_read_d : std_logic := '0';  -- para generar valid
 

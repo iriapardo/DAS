@@ -174,7 +174,7 @@ begin
   port map (
     clk   => clk,
     reset => reset,
-    push_button => '0',  -- no usado ahora
+    push_button => not KEY(1),
     draw_rect_done_rect => done_rect,
 
     x_pos    => s_x_pos,

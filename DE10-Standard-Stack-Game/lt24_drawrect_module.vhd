@@ -44,7 +44,6 @@ architecture arch_lcd_drawrect of lcd_drawrect is
 begin 
 
 -- REGISTROS RECT_X, RECT_Y, RECT_W, RECT_H, RECT_RGB
-
 	REG_RECT_X: process(clk, reset, rect_x, rect_draw)
 	begin	
 		if reset='1' then r_rect_x <= (others => '0');
@@ -101,7 +100,7 @@ begin
 	
 	rgb_colour <= r_rect_rgb;
 
-	rect_numpix <= x"00"&"0"&r_rect_w;
+	rect_numpix <= "000000000"&r_rect_w;
 	
 	done_rect <= done_cont;
 
@@ -130,7 +129,7 @@ begin
 			when e2 => if ctrl_done_colour='1' then esig <= e3;
 				   else esig <= e2;
 				   end if;
-			when e3 => esig <= e4;
+			when e3 => esig <= e4;	
 			when e4 => if done_cont='1' then esig <= e0;
 				   else esig <= e1;
 				   end if;
