@@ -38,9 +38,13 @@ architecture arch_stack_game_logic of stack_game_logic is
 	
 	-- calculo de ciclos deseados
 	signal desired_cicles: unsigned (18 downto 0);
+	signal RGB_cont: unsigned (1 downto 0);
+	signal incr_rgb_cont: std_logic;
+	signal done_rgb_cont: std_logic;
 	
 	-- movimiento del bloque 
 	signal moving_block_x: unsigned (7 downto 0);
+	signal moving_block_RGB: unsigned (15 downto 0);
 	signal rest: std_logic;
 
     signal dir: std_logic;
@@ -171,6 +175,26 @@ begin
 
 
 -- SUM/REST POSICI�N0
+	CONT_RGB: process(clk, reset, incr_rgb_cont, done_rgb_cont)
+	begin
+		if reset='1' then
+			RGB_cont <= (others => '0');
+		elsif clk'event and clk='1' then
+			if done_rgb_cont='1' then
+				RGB_cont <= (others => '0');
+			elsif incr_rgb_cont='1' then
+				RGB_cont <= RGB_cont + 1;
+			end if;
+		end if;
+	end process;
+
+	done_rgb_cont <= '1' when RGB_cont = "11" else '0';
+
+	moving_block_RGB <= x"F800" when RGB_cont = "00" else -- rojo
+			   x"FFE0" when RGB_cont = "01" else -- amarillo
+			   x"001F" when RGB_cont = "10" else -- azul
+			   x"07E0";                          -- verde
+
       	moving_block_x <= block_data_out(7 downto 0) - 1 when rest = '1' and block_data_out(7 downto 0) > to_unsigned(0, 8) 
 			  else block_data_out(7 downto 0) + 1 when rest = '0' and block_data_out(7 downto 0) + block_data_out(24 downto 17)< to_unsigned(240, 8) 
 			  else block_data_out(7 downto 0);
@@ -276,6 +300,7 @@ load_r_desp <= '1' when epres=e4 else '0';
 desp_izq <= '1' when epres=e5 else '0';
 delegate_draw <= '1' when epres=e1 or epres=e2d or epres=e7 or epres=e10 else '0';
 ld_cicle_count <= '1' when epres=e12 else '0';
+incr_rgb_cont <= '0';
 select_draw_r_rgb <= '1' when epres=e10 or epres=e1 or epres=e2d or epres=e2w or epres=e11 else '0';
 select_draw_x_pos <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_y_pos <= '1' when epres=e2d or epres=e2w else '0';
