@@ -6,6 +6,7 @@ entity stack_game_logic is
   port (
 		reset, clk: in std_logic;
 		push_button: in std_logic;
+		push_button_2: in std_logic;
 		draw_rect_done_rect: in std_logic;
 		
 		x_pos: out unsigned (7 downto 0);
@@ -52,6 +53,29 @@ architecture arch_stack_game_logic of stack_game_logic is
 	signal x_minor_equal_cero: std_logic;
 	signal x_plus_w_greater_equal_240: std_logic;
 	signal change_dir: std_logic;
+
+	-- datapath de recorte
+	signal bdo_x_plus_w: unsigned (8 downto 0);
+	signal mux_bdo: std_logic;
+	signal bdo_cmp_ref: unsigned (8 downto 0);
+	signal fifo_is_right: std_logic;
+	signal perfect: std_logic;
+	signal left_left: std_logic;
+
+	signal fvd_x_plus_w: unsigned (8 downto 0);
+	signal mux_fvd: std_logic;
+	signal fvd_cmp_ref: unsigned (8 downto 0);
+	signal bdo_is_right: std_logic;
+
+	signal end_game: std_logic;
+	signal numpix_left: unsigned (8 downto 0);
+	signal width_left_left: unsigned (8 downto 0);
+	signal fvd_w_to_240: unsigned (7 downto 0);
+	signal moving_block_x_pul: unsigned (7 downto 0);
+	signal moving_block_y_pul: unsigned (8 downto 0);
+	signal select_moving_block_w_pul: std_logic;
+	signal moving_block_w_pul: unsigned (7 downto 0);
+	signal moving_block_data: unsigned (49 downto 0);
 	
 	--Selección mapeo de salidas:
 	signal select_draw_r_rgb: std_logic;
@@ -60,14 +84,17 @@ architecture arch_stack_game_logic of stack_game_logic is
 	signal select_draw_r_width: std_logic;
 	signal select_draw_r_height: std_logic;
 	signal select_draw_rgb_src: unsigned (1 downto 0);
+	signal r_rgb_int: unsigned (15 downto 0);
 	
 	-- FIFO queue pyramid
 	-- control
 	signal fifo_enqueue      : std_logic := '0';
 	signal fifo_enqueue_data : std_logic_vector(49 downto 0) := (others => '0');
 	signal fifo_dequeue      : std_logic := '0';
+	signal fifo_clear        : std_logic := '0';
 
 	signal fifo_view_set_tail : std_logic := '0';
+	signal fifo_view_set_last : std_logic := '0';
 	signal fifo_view_next     : std_logic := '0';
 	signal fifo_view_read     : std_logic := '0';
 
@@ -85,7 +112,7 @@ architecture arch_stack_game_logic of stack_game_logic is
 	constant D_IN_BLOCK_DATA_INI: unsigned (49 downto 0):=
 		to_unsigned(16#07E0#, 16) &
 		to_unsigned(20, 9) &
-		to_unsigned(80, 8) &
+		to_unsigned(40, 8) &
 		to_unsigned(280, 9) &
 		to_unsigned(160, 8);
 
@@ -103,9 +130,12 @@ architecture arch_stack_game_logic of stack_game_logic is
 		to_unsigned(300, 9) &
 		to_unsigned(80, 8);
 
-	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2r,e2v,e2d,e2w,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12);
+	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2s,e2c,e2r,e2v,e2d,e2w,e2n,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15);
    --type estado is (inicio,e0,e1,e2,e3);
 	signal epres, esig: estado;
+	signal draw_queue_idx: unsigned(3 downto 0);
+	signal clr_draw_queue_idx: std_logic;
+	signal inc_draw_queue_idx: std_logic;
 	
 
 begin 
@@ -115,12 +145,14 @@ begin
         port map(
             clk   => clk,
             rst   => reset,
+            clear_queue => fifo_clear,
 
             enqueue      => fifo_enqueue,
             enqueue_data => fifo_enqueue_data,
             dequeue      => fifo_dequeue,
 
             view_set_tail => fifo_view_set_tail,
+            view_set_last => fifo_view_set_last,
             view_next     => fifo_view_next,
             view_read     => fifo_view_read,
 
@@ -156,8 +188,7 @@ begin
 	end process;
 
 	d_in_r_desp<="01010000" - block_data_out(24 downto 17);
-	--desired_cicles<="111010110" - ("0"&r_desp_out);
-	desired_cicles<="1110010011100001110";
+	desired_cicles<=to_unsigned(468750,19) - (to_unsigned(0,10)&r_desp_out);
 		
 
 -- CONTADOR DE CICLOS
@@ -202,7 +233,7 @@ begin
 -- MUXER PRIMERA VEZ
 	
 	d_in_block_data <= D_IN_BLOCK_DATA_INI when sel_block_data = "01" else
-			   block_data_out(49 downto 8) & moving_block_x when sel_block_data = "00" else
+			   moving_block_data when sel_block_data = "00" else
 			   BLACK_SCREEN when sel_block_data = "10" else
 			   (others => '0');
 
@@ -225,13 +256,38 @@ begin
 	change_dir <= move_block and (x_minor_equal_cero or x_plus_w_greater_equal_240);
 	
 	rest <= dir;
+
+-- COMPONENTES DE RECORTE
+
+	bdo_x_plus_w <= ('0' & block_data_out(7 downto 0)) + ('0' & block_data_out(24 downto 17));
+	bdo_cmp_ref <= ('0' & block_data_out(7 downto 0)) when mux_bdo='0' else bdo_x_plus_w;
+
+	fifo_is_right <= '1' when ('0' & unsigned(fifo_view_data(7 downto 0))) > bdo_cmp_ref else '0';
+	perfect <= '1' when ('0' & unsigned(fifo_view_data(7 downto 0))) = bdo_cmp_ref else '0';
+	left_left <= '1' when ('0' & unsigned(fifo_view_data(7 downto 0))) < bdo_cmp_ref else '0';
+
+	fvd_x_plus_w <= ('0' & unsigned(fifo_view_data(7 downto 0))) + ('0' & unsigned(fifo_view_data(24 downto 17)));
+	fvd_cmp_ref <= ('0' & unsigned(fifo_view_data(7 downto 0))) when mux_fvd='0' else fvd_x_plus_w;
+
+	bdo_is_right <= '1' when ('0' & block_data_out(7 downto 0)) > fvd_cmp_ref else '0';
+	end_game <= fifo_is_right or bdo_is_right;
+
+	numpix_left <= bdo_cmp_ref - fvd_cmp_ref;
+	width_left_left <= ('0' & block_data_out(24 downto 17)) - numpix_left;
+	fvd_w_to_240 <= to_unsigned(240, 8) - unsigned(fifo_view_data(24 downto 17));
+	moving_block_x_pul <= fvd_w_to_240 when dir='0' else to_unsigned(0, 8);
+	moving_block_y_pul <= unsigned(fifo_view_data(16 downto 8)) - to_unsigned(20, 9);
+	moving_block_w_pul <= numpix_left(7 downto 0) when select_moving_block_w_pul='0' else width_left_left(7 downto 0);
+	moving_block_data <= block_data_out(49 downto 8) & moving_block_x when push_button_2='0' else
+			     r_rgb_int & moving_block_w_pul & block_data_out(33 downto 25) & moving_block_y_pul & moving_block_x_pul;
 	
 --MAPEO DE SALIDAS	
 	
-	r_RGB   <= x"0000" when select_draw_rgb_src="00" else
-		   block_data_out(49 downto 34) when select_draw_rgb_src="01" else
-		   unsigned(fifo_view_data(49 downto 34)) when select_draw_rgb_src="10" else
-		   x"0000";
+	r_rgb_int <= x"0000" when select_draw_rgb_src="00" else
+		     block_data_out(49 downto 34) when select_draw_rgb_src="01" else
+		     unsigned(fifo_view_data(49 downto 34)) when select_draw_rgb_src="10" else
+		     x"0000";
+	r_RGB <= r_rgb_int;
 	r_width <= unsigned(fifo_view_data(24 downto 17)) when select_draw_r_width='1' else block_data_out(24 downto 17);
 	y_pos   <= unsigned(fifo_view_data(16 downto 8)) when select_draw_y_pos='1' else block_data_out(16 downto 8);
 	x_pos   <= unsigned(fifo_view_data(7 downto 0)) when select_draw_x_pos='1' else block_data_out(7 downto 0);
@@ -248,7 +304,20 @@ begin
 		end if;
 	end process;
 
-	process (epres, move_block, draw_rect_done_rect, push_button, fifo_view_data_valid)
+	process (clk, reset)
+	begin
+		if reset='1' then
+			draw_queue_idx <= (others => '0');
+		elsif clk'event and clk='1' then
+			if clr_draw_queue_idx='1' then
+				draw_queue_idx <= (others => '0');
+			elsif inc_draw_queue_idx='1' then
+				draw_queue_idx <= draw_queue_idx + 1;
+			end if;
+		end if;
+	end process;
+
+	process (epres, move_block, draw_rect_done_rect, push_button, push_button_2, fifo_view_data_valid, draw_queue_idx, fifo_count)
 	begin 
 		case (epres) is
 			when init_q0 => esig <= init_q1;
@@ -258,23 +327,33 @@ begin
 					end if;
 			when e0 => esig <= e1;
 			when e1 => esig <= e2;
-			when e2 => if draw_rect_done_rect='1' then esig <= e2r;
+			when e2 => if draw_rect_done_rect='1' then esig <= e2s;
 				   else esig <= e2;
 				   end if;
+			when e2s => esig <= e2c;
+			when e2c => if draw_queue_idx < fifo_count then esig <= e2r;
+				    else esig <= e3;
+				    end if;
 			when e2r => esig <= e2v;
 			when e2v => if fifo_view_data_valid='1' then esig <= e2d;
 				    else esig <= e2v;
 				    end if;
 			when e2d => esig <= e2w;
-			when e2w => if draw_rect_done_rect='1' then esig <= e3;
+			when e2w => if draw_rect_done_rect='1' then esig <= e2n;
 				    else esig <= e2w;
 				    end if;
+			when e2n => esig <= e2c;
 			when e3 => esig <= e4;
 			when e4 => esig <= e5;
 			when e5 => esig <= e6;
-			when e6 => if move_block='1' then esig <= e7;
-					else esig <= e6;
-				   end if;
+			when e6 => if push_button_2='0' then
+								if move_block='0' then esig <= e6;
+								else esig <= e7;
+								end if;
+						  else 
+								esig <= e13;
+						  end if;
+	      --Dibujado del bloque en movimiento					  
 			when e7 => esig <= e8;
 			when e8 => if draw_rect_done_rect='1' then esig <= e9;
 				   else esig <= e8;
@@ -285,17 +364,30 @@ begin
 				    else esig <= e11;
 				    end if;
 			when e12 => esig <= e6;
+			
+			--Cálculo de recortes
+			when e13 => if end_game='1' then esig <= init_q0;
+							else esig <= e14;
+							end if;
+			when e14 => if left_left='1' then esig <= e15;
+							else esig <= e6;
+							end if;
+			when e15 => esig <= e6;
 		end case;
 	end process;
 
 fifo_enqueue <= '1' when epres=init_q0 else '0';
 fifo_enqueue_data <= std_logic_vector(FIFO_INIT_RECT) when epres=init_q0 else (others => '0');
 fifo_dequeue <= '0';
-fifo_view_set_tail <= '0';
-fifo_view_next <= '0';
+fifo_clear <= '1' when epres=e13 and end_game='1' else '0';
+fifo_view_set_tail <= '1' when epres=e2s else '0';
+fifo_view_set_last <= '0';
+fifo_view_next <= '1' when epres=e2n else '0';
 fifo_view_read <= '1' when epres=e2r else '0';
+clr_draw_queue_idx <= '1' when epres=e2s else '0';
+inc_draw_queue_idx <= '1' when epres=e2n else '0';
 
-load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 else '0';
+load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 or epres=e15 else '0';
 load_r_desp <= '1' when epres=e4 else '0';
 desp_izq <= '1' when epres=e5 else '0';
 delegate_draw <= '1' when epres=e1 or epres=e2d or epres=e7 or epres=e10 else '0';
@@ -309,9 +401,15 @@ select_draw_r_height <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_rgb_src <= "10" when epres=e2d or epres=e2w else
 		       "01" when select_draw_r_rgb='1' else
 		       "00";
+
 sel_block_data <= "10" when epres=e0 else
 		  "01" when epres=e3 else
 		  "00";
+		  
+mux_bdo <= '1' when epres=e13 or epres=e15 else '0';
+mux_fvd <= '1' when epres=e13 or epres=e15 else '0';
+select_moving_block_w_pul <= '1' when epres=e15 else '0';
+
 
 
 end arch_stack_game_logic;

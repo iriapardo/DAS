@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity DE10_Standard_xxx is
   port(
     CLOCK_50 : in  std_logic;
-    KEY      : in  std_logic_vector(1 downto 0);
+    KEY      : in  std_logic_vector(2 downto 0);
     LEDR     : out std_logic_vector(9 downto 0);
 
     LT24_LCD_ON  : out std_logic;
@@ -101,6 +101,7 @@ architecture rtl of DE10_Standard_xxx is
   port(
     reset, clk          : in std_logic;
     push_button         : in std_logic;
+    push_button_2       : in std_logic;
     draw_rect_done_rect : in std_logic;
 
     x_pos    : out unsigned(7 downto 0);
@@ -175,6 +176,7 @@ begin
     clk   => clk,
     reset => reset,
     push_button => not KEY(1),
+    push_button_2 => not KEY(2),
     draw_rect_done_rect => done_rect,
 
     x_pos    => s_x_pos,

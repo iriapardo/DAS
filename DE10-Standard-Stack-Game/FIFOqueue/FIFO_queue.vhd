@@ -6,6 +6,7 @@ entity FIFO_queue is
     port(
         clk   : in  std_logic;
         rst   : in  std_logic;
+        clear_queue : in std_logic;
 
         -- Operaciones (pulso de 1 ciclo)
         enqueue      : in  std_logic;
@@ -13,6 +14,7 @@ entity FIFO_queue is
         dequeue      : in  std_logic;
 
         view_set_tail : in std_logic;
+        view_set_last : in std_logic;
         view_next     : in std_logic;
         view_read     : in std_logic;
 
@@ -70,6 +72,15 @@ architecture rtl of FIFO_queue is
         end if;
     end function;
 
+    function prev11(x : unsigned(3 downto 0)) return unsigned is
+    begin
+        if x = to_unsigned(0,4) then
+            return to_unsigned(10,4);
+        else
+            return x - 1;
+        end if;
+    end function;
+
 begin
 
     ------------------------------------------------------------------
@@ -101,7 +112,7 @@ begin
     begin
         if rising_edge(clk) then
 
-            if rst = '1' then
+            if rst = '1' or clear_queue = '1' then
                 head <= (others => '0');
                 tail <= (others => '0');
                 view_ptr <= (others => '0');
@@ -128,6 +139,14 @@ begin
                 ------------------------------------------------------------------
                 if view_set_tail = '1' then
                     view_ptr <= tail;
+
+                elsif view_set_last = '1' then
+                    if elem_count > 0 then
+                        -- head apunta al siguiente hueco libre; último válido es head-1
+                        view_ptr <= prev11(head);
+                    else
+                        view_ptr <= tail;
+                    end if;
 
                 elsif view_next = '1' then
                     view_ptr <= next11(view_ptr);
