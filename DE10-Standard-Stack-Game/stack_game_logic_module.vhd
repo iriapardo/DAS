@@ -51,6 +51,11 @@ architecture arch_stack_game_logic of stack_game_logic is
 	
 	--Selección mapeo de salidas:
 	signal select_draw_r_rgb: std_logic;
+	signal select_draw_x_pos: std_logic;
+	signal select_draw_y_pos: std_logic;
+	signal select_draw_r_width: std_logic;
+	signal select_draw_r_height: std_logic;
+	signal select_draw_rgb_src: unsigned (1 downto 0);
 	
 	-- FIFO queue pyramid
 	-- control
@@ -77,7 +82,7 @@ architecture arch_stack_game_logic of stack_game_logic is
 		to_unsigned(16#07E0#, 16) &
 		to_unsigned(20, 9) &
 		to_unsigned(80, 8) &
-		to_unsigned(0, 9) &
+		to_unsigned(280, 9) &
 		to_unsigned(160, 8);
 
 	constant BLACK_SCREEN: unsigned (49 downto 0):=
@@ -87,7 +92,14 @@ architecture arch_stack_game_logic of stack_game_logic is
 		to_unsigned(0, 9) &
 		to_unsigned(0, 8);
 
-	type estado is (inicio,e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12);
+	constant FIFO_INIT_RECT: unsigned (49 downto 0):=
+		to_unsigned(16#F800#, 16) &
+		to_unsigned(20, 9) &
+		to_unsigned(80, 8) &
+		to_unsigned(300, 9) &
+		to_unsigned(80, 8);
+
+	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2r,e2v,e2d,e2w,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12);
    --type estado is (inicio,e0,e1,e2,e3);
 	signal epres, esig: estado;
 	
@@ -192,11 +204,14 @@ begin
 	
 --MAPEO DE SALIDAS	
 	
-	r_RGB   <= block_data_out(49 downto 34) when select_draw_r_rgb='1' else x"0000";
-	r_width <= block_data_out(24 downto 17);
-	y_pos   <= block_data_out(16 downto 8);
-	x_pos   <= block_data_out(7 downto 0);
-	r_height <= block_data_out(33 downto 25); 
+	r_RGB   <= x"0000" when select_draw_rgb_src="00" else
+		   block_data_out(49 downto 34) when select_draw_rgb_src="01" else
+		   unsigned(fifo_view_data(49 downto 34)) when select_draw_rgb_src="10" else
+		   x"0000";
+	r_width <= unsigned(fifo_view_data(24 downto 17)) when select_draw_r_width='1' else block_data_out(24 downto 17);
+	y_pos   <= unsigned(fifo_view_data(16 downto 8)) when select_draw_y_pos='1' else block_data_out(16 downto 8);
+	x_pos   <= unsigned(fifo_view_data(7 downto 0)) when select_draw_x_pos='1' else block_data_out(7 downto 0);
+	r_height <= unsigned(fifo_view_data(33 downto 25)) when select_draw_r_height='1' else block_data_out(33 downto 25); 
 
 
 --UNIDAD DE CONTROL (L GICA DE ESTADOS)  	
@@ -204,22 +219,32 @@ begin
 	process (clk,reset) --proceso s ncrono que registra el estado en cada flanco
 
 	begin
-		if reset='1' then epres<=inicio; --reset as�ncrono
+		if reset='1' then epres<=init_q0; --reset as�ncrono
 		elsif clk'event and clk='1' then epres<=esig;
 		end if;
 	end process;
 
-	process (epres, move_block, draw_rect_done_rect, push_button)
+	process (epres, move_block, draw_rect_done_rect, push_button, fifo_view_data_valid)
 	begin 
 		case (epres) is
+			when init_q0 => esig <= init_q1;
+			when init_q1 => esig <= inicio;
 			when inicio => if push_button='1' then esig <=e0;
 					else esig <= inicio;
 					end if;
 			when e0 => esig <= e1;
 			when e1 => esig <= e2;
-			when e2 => if draw_rect_done_rect='1' then esig <= e3;
+			when e2 => if draw_rect_done_rect='1' then esig <= e2r;
 				   else esig <= e2;
 				   end if;
+			when e2r => esig <= e2v;
+			when e2v => if fifo_view_data_valid='1' then esig <= e2d;
+				    else esig <= e2v;
+				    end if;
+			when e2d => esig <= e2w;
+			when e2w => if draw_rect_done_rect='1' then esig <= e3;
+				    else esig <= e2w;
+				    end if;
 			when e3 => esig <= e4;
 			when e4 => esig <= e5;
 			when e5 => esig <= e6;
@@ -239,25 +264,29 @@ begin
 		end case;
 	end process;
 
+fifo_enqueue <= '1' when epres=init_q0 else '0';
+fifo_enqueue_data <= std_logic_vector(FIFO_INIT_RECT) when epres=init_q0 else (others => '0');
+fifo_dequeue <= '0';
+fifo_view_set_tail <= '0';
+fifo_view_next <= '0';
+fifo_view_read <= '1' when epres=e2r else '0';
+
 load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 else '0';
 load_r_desp <= '1' when epres=e4 else '0';
 desp_izq <= '1' when epres=e5 else '0';
-delegate_draw <= '1' when epres=e1 or epres=e7 or epres=e10 else '0';
+delegate_draw <= '1' when epres=e1 or epres=e2d or epres=e7 or epres=e10 else '0';
 ld_cicle_count <= '1' when epres=e12 else '0';
-select_draw_r_rgb <= '1' when epres=e10 or epres=e1 or epres=e2 or epres=e11 else '0';
+select_draw_r_rgb <= '1' when epres=e10 or epres=e1 or epres=e2d or epres=e2w or epres=e11 else '0';
+select_draw_x_pos <= '1' when epres=e2d or epres=e2w else '0';
+select_draw_y_pos <= '1' when epres=e2d or epres=e2w else '0';
+select_draw_r_width <= '1' when epres=e2d or epres=e2w else '0';
+select_draw_r_height <= '1' when epres=e2d or epres=e2w else '0';
+select_draw_rgb_src <= "10" when epres=e2d or epres=e2w else
+		       "01" when select_draw_r_rgb='1' else
+		       "00";
 sel_block_data <= "10" when epres=e0 else
 		  "01" when epres=e3 else
 		  "00";
-		  
-
---load_block_data <= '1' when epres=e0 else '0';
---delegate_draw <= '1' when epres=e1 else '0';
---select_draw_r_rgb <= '1' when epres=e1 else '0';
---sel_block_data <= "10" when epres=e0 else "00";
---
---load_r_desp <= '0';
---desp_izq <= '0';
---ld_cicle_count <= '0';
 
 
 end arch_stack_game_logic;
