@@ -41,8 +41,8 @@ architecture rtl of DE10_Standard_xxx is
   -- STACK GAME outputs
   signal s_x_pos    : unsigned(7 downto 0);
   signal s_y_pos    : unsigned(8 downto 0);
-  signal s_w        : unsigned(6 downto 0);
-  signal s_h        : unsigned(4 downto 0);
+  signal s_w        : unsigned(7 downto 0);
+  signal s_h        : unsigned(8 downto 0);
   signal s_rgb      : unsigned(15 downto 0);
   signal s_delegate_draw : std_logic;
 
@@ -81,8 +81,8 @@ architecture rtl of DE10_Standard_xxx is
     reset, clk : in std_logic;
     rect_x     : in unsigned(7 downto 0);
     rect_y     : in unsigned(8 downto 0);
-    rect_w     : in unsigned(6 downto 0);
-    rect_h     : in unsigned(4 downto 0);
+    rect_w     : in unsigned(7 downto 0);
+    rect_h     : in unsigned(8 downto 0);
     rect_rgb   : in unsigned(15 downto 0);
     rect_draw  : in std_logic;
     ctrl_done_cursor : in std_logic;
@@ -105,8 +105,8 @@ architecture rtl of DE10_Standard_xxx is
 
     x_pos    : out unsigned(7 downto 0);
     y_pos    : out unsigned(8 downto 0);
-    r_width  : out unsigned(6 downto 0);
-    r_height : out unsigned(4 downto 0);
+    r_width  : out unsigned(7 downto 0);
+    r_height : out unsigned(8 downto 0);
     r_RGB    : out unsigned(15 downto 0);
     delegate_draw : out std_logic
   );
@@ -174,7 +174,7 @@ begin
   port map (
     clk   => clk,
     reset => reset,
-    push_button => '0',  -- no usado ahora
+    push_button => not KEY(1),
     draw_rect_done_rect => done_rect,
 
     x_pos    => s_x_pos,
