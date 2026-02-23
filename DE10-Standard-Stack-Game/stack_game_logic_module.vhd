@@ -385,9 +385,8 @@ begin
 			when e13 => if end_game='1' then esig <= init_q0;
 							else esig <= e14;
 							end if;
-			when e14 => if perfect='1' then esig <= e17 ;
-							else if left_left='1' then esig <= e15s;
-							else esig <= e6;
+			when e14 => if left_left='1' then esig <= e15s;
+							else esig <= e0;
 							end if;
 			when e15s => esig <= e15r;
 			when e15r => esig <= e15v;
@@ -396,6 +395,8 @@ begin
 				     end if;
 			when e15 => esig <= e16;
 			when e16 => esig <= e0;
+
+			
 		end case;
 	end process;
 
