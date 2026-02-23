@@ -23,7 +23,6 @@ entity lcd_drawrect is
 		done_rect: out std_logic
 	);
 
-
 end lcd_drawrect;
 
 architecture arch_lcd_drawrect of lcd_drawrect is 
