@@ -37,6 +37,18 @@ architecture arch_stack_game_logic of stack_game_logic is
 	signal cicle_count_value: unsigned (18 downto 0);
 	signal move_block: std_logic;
 	
+	-- contador de niveles
+	signal ld_lvl_count: std_logic;
+	signal lvl_count_value: unsigned (5 downto 0);
+	signal incr_lvl_count: std_logic;
+	signal win: std_logic;
+
+	
+	-- contador de y para los elementos de la cola
+	signal ld_queue_y_count: std_logic;
+	signal queue_y_count_value: unsigned (8 downto 0);
+	signal decr_queue_y_count: std_logic;
+	
 	-- calculo de ciclos deseados
 	signal desired_cicles: unsigned (18 downto 0);
 	signal RGB_cont: unsigned (1 downto 0);
@@ -47,7 +59,7 @@ architecture arch_stack_game_logic of stack_game_logic is
 	signal moving_block_RGB: unsigned (15 downto 0);
 	signal rest: std_logic;
 
-    signal dir: std_logic;
+   signal dir: std_logic;
 	signal x_plus_w: unsigned (8 downto 0);
 	signal x_minor_equal_cero: std_logic;
 	signal x_plus_w_greater_equal_240: std_logic;
@@ -129,7 +141,7 @@ architecture arch_stack_game_logic of stack_game_logic is
 		to_unsigned(300, 9) &
 		to_unsigned(80, 8);
 
-	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2s,e2c,e2r,e2v,e2d,e2w,e2n,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15s,e15r,e15v,e15,e16,e17s,e17r,e17v,e17,e18s,e18r,e18v,e18);
+	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2s,e2c,e2r,e2v,e2d,e2w,e2n,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15s,e15r,e15v,e15,e16q,e16,e18s,e18r,e18v,e18);
    --type estado is (inicio,e0,e1,e2,e3);
 	signal epres, esig: estado;
 	signal draw_queue_idx: unsigned(3 downto 0);
@@ -208,6 +220,31 @@ begin
 	end process;
 	move_block <= '1' when cicle_count_value = desired_cicles else '0';
 
+-- CONTADOR DE NIVELES
+
+	CONT_LVL: process(clk, reset, ld_lvl_count)
+	begin 
+		if reset='1' then lvl_count_value <= (others => '0');
+		elsif clk'event and clk='1' then
+			if ld_lvl_count='1' then lvl_count_value <= (others => '0');
+			else if incr_lvl_count='1' then lvl_count_value <= lvl_count_value + 1;
+					end if;
+			end if;
+		end if;
+	end process;
+	win <= '1' when lvl_count_value = to_unsigned(50,6) else '0';
+
+	CONT_QUEUE_Y: process(clk, reset, ld_queue_y_count, decr_queue_y_count, queue_y_count_value)
+	begin
+		if reset='1' then
+			queue_y_count_value <= (others => '0');
+		elsif clk'event and clk='1' then
+			if ld_queue_y_count='1' then queue_y_count_value <= to_unsigned(320, 9);
+			elsif decr_queue_y_count='1' then
+				queue_y_count_value <= queue_y_count_value - to_unsigned(20, 9);
+			end if;
+		end if;
+	end process;
 
 -- SUM/REST POSICI�N0
 	CONT_RGB: process(clk, reset, incr_rgb_cont)
@@ -220,7 +257,6 @@ begin
 			end if;
 		end if;	
 	end process;
-
 
 
 	moving_block_RGB <= x"F800" when RGB_cont = "00" else -- rojo
@@ -278,7 +314,7 @@ begin
 	width_left_left <= ('0' & block_data_out(24 downto 17)) - numpix_left;
 	fvd_w_to_240 <= to_unsigned(240, 8) - unsigned(fifo_view_data(24 downto 17));
 	moving_block_x_pul <= fvd_w_to_240 when dir='0' else to_unsigned(0, 8);
-	moving_block_y_pul <= unsigned(fifo_view_data(16 downto 8)) - to_unsigned(20, 9);
+	moving_block_y_pul <= to_unsigned(80, 9) when fifo_full='1' else unsigned(fifo_view_data(16 downto 8)) - to_unsigned(20, 9);
 	moving_block_w_pul <= numpix_left(7 downto 0) when select_moving_block_w_pul='0' else width_left_left(7 downto 0);
 	moving_block_data <= moving_block_RGB & block_data_out(33 downto 17) & moving_block_y_pul & moving_block_x when button_detected='0' else
 			     r_rgb_int &  block_data_out(33 downto 25) & moving_block_w_pul & moving_block_y_pul & block_data_out(7 downto 0);
@@ -291,7 +327,8 @@ begin
 		     x"0000";
 	r_RGB <= r_rgb_int;
 	r_width <= unsigned(fifo_view_data(24 downto 17)) when select_draw_r_width='1' else block_data_out(24 downto 17);
-	y_pos   <= unsigned(fifo_view_data(16 downto 8)) when select_draw_y_pos='1' else block_data_out(16 downto 8);
+	y_pos   <= unsigned(queue_y_count_value) when select_draw_y_pos='1' else
+		   block_data_out(16 downto 8);
 	x_pos   <= unsigned(fifo_view_data(7 downto 0)) when select_draw_x_pos='1' else block_data_out(7 downto 0);
 	r_height <= unsigned(fifo_view_data(33 downto 25)) when select_draw_r_height='1' else block_data_out(33 downto 25); 
 
@@ -333,7 +370,7 @@ begin
 	push_button_rise <= push_button and not push_button_d;
 	push_button_2_rise <= push_button_2 and not push_button_2_d;
 
-	process (epres, move_block, draw_rect_done_rect, push_button_rise, push_button_2_rise, fifo_view_data_valid, draw_queue_idx, fifo_count, end_game, left_left)
+	process (epres, move_block, draw_rect_done_rect, push_button_rise, push_button_2_rise, fifo_view_data_valid, draw_queue_idx, fifo_count, end_game, left_left, perfect)
 	begin 
 		case (epres) is
 			when init_q0 => esig <= init_q1;
@@ -385,7 +422,7 @@ begin
 			when e13 => if end_game='1' then esig <= init_q0;
 							else esig <= e14;
 							end if;
-			when e14 => if perfect='1' then esig <= e17s ;
+			when e14 => if perfect='1' then esig <= e15s ;
 							else 
 								if left_left='1' then esig <= e15s;
 								else esig <= e18s;
@@ -396,49 +433,51 @@ begin
 			when e15v => if fifo_view_data_valid='1' then esig <= e15;
 				     else esig <= e15v;
 				     end if;
-			when e15 => esig <= e16;
+			when e15 => esig <= e16q;
+			when e16q => esig <= e16;
 			when e16 => esig <= e0;
-			when e17s => esig <= e17r;
-		   when e17r => esig <= e17;
-			when e17v => if fifo_view_data_valid='1' then esig <= e17;
-				     else esig <= e17v;
-				     end if;
-			when e17 => esig <= e16;
 			when e18s => esig <= e18r;
 			when e18r => esig <= e18;
 			when e18v => if fifo_view_data_valid='1' then esig <= e18;
 				     else esig <= e18v;
 				     end if;
-			when e18 => esig <= e16;
+			when e18 => esig <= e16q;
 			
 		end case;
 	end process;
 
 fifo_enqueue <= '1' when epres=init_q0 or epres=e16 else '0';
 fifo_enqueue_data <= std_logic_vector(FIFO_INIT_RECT) when epres=init_q0 else
-		     std_logic_vector(block_data_out) when epres=e16 else
+		     std_logic_vector(block_data_out) when epres=e16 and left_left='1' else
+			  std_logic_vector(block_data_out(49 downto 8) & unsigned(fifo_view_data(7 downto 0))) when epres=e16 else
 		     (others => '0');
-fifo_dequeue <= '0';
+fifo_dequeue <= '1' when epres=e16q and fifo_full='1' else '0';
 fifo_clear <= '1' when epres=e13 and end_game='1' else '0';
 fifo_view_set_tail <= '1' when epres=e2s else '0';
-fifo_view_set_last <= '1' when epres=e15s or epres=e17s or epres=e18s else '0';
+fifo_view_set_last <= '1' when epres=e15s or epres=e18s else '0';
 fifo_view_next <= '1' when epres=e2n else '0';
-fifo_view_read <= '1' when epres=e2r or epres=e15r or epres=e17r or epres=e18r else '0';
+fifo_view_read <= '1' when epres=e2r or epres=e15r or epres=e18r else '0';
 clr_draw_queue_idx <= '1' when epres=e2s else '0';
 inc_draw_queue_idx <= '1' when epres=e2n else '0';
 
-load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 or epres=e15 or epres=e17 or epres=e18 else '0';
+ld_lvl_count <= '1' when epres=init_q0 else '0';
+load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 or epres=e15 or epres=e18 else '0';
 load_r_desp <= '1' when epres=e4 else '0';
 desp_izq <= '1' when epres=e5 else '0';
 delegate_draw <= '1' when epres=e1 or epres=e2d or epres=e7 or epres=e10 else '0';
 ld_cicle_count <= '1' when epres=e12 else '0';
 incr_rgb_cont <= '1' when epres=e16 else '0';
+incr_lvl_count <= '1' when epres=e16 else '0';
+
+ld_queue_y_count <= '1' when epres=e0 else '0';
+decr_queue_y_count <= '1' when epres=e2r else '0';
+
 select_draw_x_pos <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_y_pos <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_width <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_height <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_rgb <= "10" when epres=e2d or epres=e2w else
-		       "01" when epres=e10 or epres=e1 or epres=e2d or epres=e2w or epres=e11 or epres=e15 or epres=e17 or epres=e18 else
+		       "01" when epres=e10 or epres=e1 or epres=e2d or epres=e2w or epres=e11 or epres=e15 or epres=e18 else
 		       "00";
 
 sel_block_data <= "10" when epres=e0 else
@@ -449,7 +488,7 @@ mux_bdo <= '1' when epres=e13 or epres=e15 or epres=e18 else '0';
 mux_fvd <= '1' when epres=e13 or epres=e15 else '0';
 select_moving_block_w_pul <= '1' when epres=e15 else '0';
 
-button_detected <= '1' when epres=e15 or epres=e17 or epres=e18 else '0';
+button_detected <= '1' when epres=e15 or epres=e18 else '0';
 
 
 
