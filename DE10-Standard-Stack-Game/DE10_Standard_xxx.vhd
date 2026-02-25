@@ -7,6 +7,8 @@ entity DE10_Standard_xxx is
     CLOCK_50 : in  std_logic;
     KEY      : in  std_logic_vector(2 downto 0);
     LEDR     : out std_logic_vector(9 downto 0);
+    HEX0     : out std_logic_vector(6 downto 0);
+    HEX1     : out std_logic_vector(6 downto 0);
 
     LT24_LCD_ON  : out std_logic;
     LT24_RESET_N : out std_logic;
@@ -44,6 +46,8 @@ architecture rtl of DE10_Standard_xxx is
   signal s_w        : unsigned(7 downto 0);
   signal s_h        : unsigned(8 downto 0);
   signal s_rgb      : unsigned(15 downto 0);
+  signal s_lvl_tens : unsigned(3 downto 0);
+  signal s_lvl_units: unsigned(3 downto 0);
   signal s_delegate_draw : std_logic;
 
   --------------------------------------------------------------------
@@ -109,7 +113,16 @@ architecture rtl of DE10_Standard_xxx is
     r_width  : out unsigned(7 downto 0);
     r_height : out unsigned(8 downto 0);
     r_RGB    : out unsigned(15 downto 0);
+    lvl_tens : out unsigned(3 downto 0);
+    lvl_units: out unsigned(3 downto 0);
     delegate_draw : out std_logic
+  );
+  end component;
+
+  component hex_7seg
+  port(
+    hex : in std_logic_vector(3 downto 0);
+    dig : out std_logic_vector(6 downto 0)
   );
   end component;
   --------------------------------------------------------------------
@@ -184,6 +197,8 @@ begin
     r_width  => s_w,
     r_height => s_h,
     r_RGB    => s_rgb,
+    lvl_tens => s_lvl_tens,
+    lvl_units => s_lvl_units,
     delegate_draw => s_delegate_draw
   );
 
@@ -214,6 +229,21 @@ begin
     rect_numpix => rect_numpix,
 
     done_rect => done_rect
+  );
+
+  --------------------------------------------------------------------
+  -- 7-SEG LEVEL DISPLAY
+  --------------------------------------------------------------------
+  U_HEX_UNITS: hex_7seg
+  port map (
+    hex => std_logic_vector(s_lvl_units),
+    dig => HEX0
+  );
+
+  U_HEX_TENS: hex_7seg
+  port map (
+    hex => std_logic_vector(s_lvl_tens),
+    dig => HEX1
   );
 
   -- Debug opcional

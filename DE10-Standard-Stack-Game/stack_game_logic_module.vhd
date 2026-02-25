@@ -14,6 +14,8 @@ entity stack_game_logic is
 		r_width: out unsigned (7 downto 0);
 		r_height: out unsigned (8 downto 0);
 		r_RGB: out unsigned (15 downto 0);
+		lvl_tens: out unsigned (3 downto 0);
+		lvl_units: out unsigned (3 downto 0);
 		delegate_draw: out std_logic
 		
 	);
@@ -40,6 +42,8 @@ architecture arch_stack_game_logic of stack_game_logic is
 	-- contador de niveles
 	signal ld_lvl_count: std_logic;
 	signal lvl_count_value: unsigned (5 downto 0);
+	signal lvl_count_tens: unsigned (3 downto 0);
+	signal lvl_count_units: unsigned (3 downto 0);
 	signal incr_lvl_count: std_logic;
 	signal win: std_logic;
 
@@ -233,6 +237,8 @@ begin
 		end if;
 	end process;
 	win <= '1' when lvl_count_value = to_unsigned(50,6) else '0';
+	lvl_count_tens <= resize(lvl_count_value / 10, lvl_count_tens'length);
+	lvl_count_units <= resize(lvl_count_value mod 10, lvl_count_units'length);
 
 	CONT_QUEUE_Y: process(clk, reset, ld_queue_y_count, decr_queue_y_count, queue_y_count_value)
 	begin
@@ -331,6 +337,8 @@ begin
 		   block_data_out(16 downto 8);
 	x_pos   <= unsigned(fifo_view_data(7 downto 0)) when select_draw_x_pos='1' else block_data_out(7 downto 0);
 	r_height <= unsigned(fifo_view_data(33 downto 25)) when select_draw_r_height='1' else block_data_out(33 downto 25); 
+	lvl_tens <= lvl_count_tens;
+	lvl_units <= lvl_count_units;
 
 
 --UNIDAD DE CONTROL (L GICA DE ESTADOS)  	
