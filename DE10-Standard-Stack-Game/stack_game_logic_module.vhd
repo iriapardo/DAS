@@ -6,7 +6,7 @@ entity stack_game_logic is
   port (
 		reset, clk: in std_logic;
 		push_button: in std_logic;
-		push_button_2: in std_logic;
+		--push_button_2: in std_logic;
 		draw_rect_done_rect: in std_logic;
 		
 		x_pos: out unsigned (7 downto 0);
@@ -144,17 +144,17 @@ architecture arch_stack_game_logic of stack_game_logic is
 		to_unsigned(80, 8) &
 		to_unsigned(300, 9) &
 		to_unsigned(80, 8);
-
+		
 	type estado is (init_q0,init_q1,inicio,e0,e1,e2,e2s,e2c,e2r,e2v,e2d,e2w,e2n,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15s,e15r,e15v,e15,e16q,e16,e18s,e18r,e18v,e18);
-   --type estado is (inicio,e0,e1,e2,e3);
 	signal epres, esig: estado;
+	
 	signal draw_queue_idx: unsigned(3 downto 0);
 	signal clr_draw_queue_idx: std_logic;
 	signal inc_draw_queue_idx: std_logic;
 	signal push_button_d: std_logic;
-	signal push_button_2_d: std_logic;
+	--signal push_button_2: std_logic;
 	signal push_button_rise: std_logic;
-	signal push_button_2_rise: std_logic;
+	--signal push_button_2_rise: std_logic;
 	signal button_detected: std_logic;
 	
 
@@ -300,6 +300,35 @@ begin
 	change_dir <= move_block and (x_minor_equal_cero or x_plus_w_greater_equal_240);
 	
 	rest <= dir;
+	
+-- OTROS
+
+	process (clk, reset)
+	begin
+		if reset='1' then
+			draw_queue_idx <= (others => '0');
+		elsif clk'event and clk='1' then
+			if clr_draw_queue_idx='1' then
+				draw_queue_idx <= (others => '0');
+			elsif inc_draw_queue_idx='1' then
+				draw_queue_idx <= draw_queue_idx + 1;
+			end if;
+		end if;
+	end process;
+
+	process (clk, reset)
+	begin
+		if reset='1' then
+			push_button_d <= '0';
+			--push_button_2 <= '0';
+		elsif clk'event and clk='1' then
+			push_button_d <= push_button;
+			--push_button_2_d <= push_button_2;
+		end if;
+	end process;
+
+	push_button_rise <= push_button and not push_button_d;
+	--push_button_2_rise <= push_button_2 and not push_button_2_d;
 
 -- COMPONENTES DE RECORTE
 
@@ -342,7 +371,7 @@ begin
 
 
 --UNIDAD DE CONTROL (L GICA DE ESTADOS)  	
-
+	
 	process (clk,reset) --proceso s ncrono que registra el estado en cada flanco
 
 	begin
@@ -351,34 +380,7 @@ begin
 		end if;
 	end process;
 
-	process (clk, reset)
-	begin
-		if reset='1' then
-			draw_queue_idx <= (others => '0');
-		elsif clk'event and clk='1' then
-			if clr_draw_queue_idx='1' then
-				draw_queue_idx <= (others => '0');
-			elsif inc_draw_queue_idx='1' then
-				draw_queue_idx <= draw_queue_idx + 1;
-			end if;
-		end if;
-	end process;
-
-	process (clk, reset)
-	begin
-		if reset='1' then
-			push_button_d <= '0';
-			push_button_2_d <= '0';
-		elsif clk'event and clk='1' then
-			push_button_d <= push_button;
-			push_button_2_d <= push_button_2;
-		end if;
-	end process;
-
-	push_button_rise <= push_button and not push_button_d;
-	push_button_2_rise <= push_button_2 and not push_button_2_d;
-
-	process (epres, move_block, draw_rect_done_rect, push_button_rise, push_button_2_rise, fifo_view_data_valid, draw_queue_idx, fifo_count, end_game, left_left, perfect)
+	process (epres, move_block, draw_rect_done_rect, push_button_rise, fifo_view_data_valid, draw_queue_idx, fifo_count, end_game, left_left, perfect)
 	begin 
 		case (epres) is
 			when init_q0 => esig <= init_q1;
@@ -407,7 +409,7 @@ begin
 			when e3 => esig <= e4;
 			when e4 => esig <= e5;
 			when e5 => esig <= e6;
-			when e6 => if push_button_2_rise='0' then
+			when e6 => if push_button_rise='0' then
 								if move_block='0' then esig <= e6;
 								else esig <= e7;
 								end if;

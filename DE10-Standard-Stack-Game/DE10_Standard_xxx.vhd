@@ -6,6 +6,7 @@ entity DE10_Standard_xxx is
   port(
     CLOCK_50 : in  std_logic;
     KEY      : in  std_logic_vector(2 downto 0);
+    UART_RX  : in  std_logic;
     LEDR     : out std_logic_vector(9 downto 0);
     HEX0     : out std_logic_vector(6 downto 0);
     HEX1     : out std_logic_vector(6 downto 0);
@@ -49,6 +50,7 @@ architecture rtl of DE10_Standard_xxx is
   signal s_lvl_tens : unsigned(3 downto 0);
   signal s_lvl_units: unsigned(3 downto 0);
   signal s_delegate_draw : std_logic;
+  signal s_space_detected : std_logic;
 
   --------------------------------------------------------------------
   component LT24Setup
@@ -105,7 +107,7 @@ architecture rtl of DE10_Standard_xxx is
   port(
     reset, clk          : in std_logic;
     push_button         : in std_logic;
-    push_button_2       : in std_logic;
+    --push_button_2       : in std_logic;
     draw_rect_done_rect : in std_logic;
 
     x_pos    : out unsigned(7 downto 0);
@@ -116,6 +118,15 @@ architecture rtl of DE10_Standard_xxx is
     lvl_tens : out unsigned(3 downto 0);
     lvl_units: out unsigned(3 downto 0);
     delegate_draw : out std_logic
+  );
+  end component;
+
+  component uart_module
+  port(
+    clk            : in  std_logic;
+    reset          : in  std_logic;
+    uart_rx        : in  std_logic;
+    space_detected : out std_logic
   );
   end component;
 
@@ -184,12 +195,20 @@ begin
   --------------------------------------------------------------------
   -- STACK GAME LOGIC
   --------------------------------------------------------------------
+  U_UART: uart_module
+  port map (
+    clk => clk,
+    reset => reset,
+    uart_rx => UART_RX,
+    space_detected => s_space_detected
+  );
+
   U_GAME: stack_game_logic
   port map (
     clk   => clk,
     reset => reset,
-    push_button => not KEY(1),
-    push_button_2 => not KEY(2),
+    push_button => s_space_detected or not(KEY(1)),
+    --push_button_2 => s_space_detected,
     draw_rect_done_rect => done_rect,
 
     x_pos    => s_x_pos,
@@ -250,6 +269,8 @@ begin
   LEDR(0) <= init_done;
   LEDR(1) <= s_delegate_draw;
   LEDR(2) <= done_rect;
-  LEDR(9 downto 3) <= (others => '0');
+  LEDR(3) <= s_space_detected;
+  LEDR(4) <= UART_RX;
+  LEDR(9 downto 5) <= (others => '0');
 
 end rtl;
