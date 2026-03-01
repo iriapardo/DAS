@@ -55,7 +55,9 @@ architecture arch_stack_game_logic of stack_game_logic is
 	
 	-- calculo de ciclos deseados
 	signal desired_cicles: unsigned (18 downto 0);
-	signal RGB_cont: unsigned (1 downto 0);
+	signal RGB_cont: unsigned (2 downto 0);
+	signal rgb_dir_up: std_logic;
+	signal ld_rgb_count: std_logic;
 	signal incr_rgb_cont: std_logic;
 	
 	-- movimiento del bloque 
@@ -125,21 +127,21 @@ architecture arch_stack_game_logic of stack_game_logic is
 
 	signal sel_block_data: unsigned (1 downto 0);
 	constant D_IN_BLOCK_DATA_INI: unsigned (49 downto 0):=
-		to_unsigned(16#07E0#, 16) &
+		to_unsigned(16#8000#, 16) &
 		to_unsigned(20, 9) &
 		to_unsigned(80, 8) &
 		to_unsigned(280, 9) &
 		to_unsigned(160, 8);
 
 	constant BLACK_SCREEN: unsigned (49 downto 0):=
-		to_unsigned(16#0000#, 16) &
+		to_unsigned(16#1801#, 16) &
 		to_unsigned(320, 9) &
 		to_unsigned(240, 8) &
 		to_unsigned(0, 9) &
 		to_unsigned(0, 8);
 
 	constant FIFO_INIT_RECT: unsigned (49 downto 0):=
-		to_unsigned(16#07E0#, 16) &
+		to_unsigned(16#8000#, 16) &
 		to_unsigned(20, 9) &
 		to_unsigned(80, 8) &
 		to_unsigned(300, 9) &
@@ -253,22 +255,41 @@ begin
 	end process;
 
 -- SUM/REST POSICI�N0
-	CONT_RGB: process(clk, reset, incr_rgb_cont)
+	CONT_RGB: process(clk, reset, ld_rgb_count, incr_rgb_cont, RGB_cont, rgb_dir_up)
 	begin
 		if reset='1' then
 			RGB_cont <= (others => '0');
+			rgb_dir_up <= '1';
 		elsif clk'event and clk='1' then
-			if incr_rgb_cont='1' then
-				RGB_cont <= RGB_cont + 1;
+			if ld_rgb_count='1' then
+				RGB_cont <= (others => '0');
+				rgb_dir_up <= '1';
+			elsif incr_rgb_cont='1' then
+				if rgb_dir_up='1' then
+					if RGB_cont = to_unsigned(4, RGB_cont'length) then
+						RGB_cont <= to_unsigned(3, RGB_cont'length);
+						rgb_dir_up <= '0';
+					else
+						RGB_cont <= RGB_cont + 1;
+					end if;
+				else
+					if RGB_cont = to_unsigned(0, RGB_cont'length) then
+						RGB_cont <= to_unsigned(1, RGB_cont'length);
+						rgb_dir_up <= '1';
+					else
+						RGB_cont <= RGB_cont - 1;
+					end if;
+				end if;
 			end if;
 		end if;	
 	end process;
 
 
-	moving_block_RGB <= x"F800" when RGB_cont = "00" else -- rojo
-			   x"FFE0" when RGB_cont = "01" else -- amarillo
-			   x"001F" when RGB_cont = "10" else -- azul
-			   x"07E0";                          -- verde
+	moving_block_RGB <= x"C800" when RGB_cont = "000" else
+			   x"F800" when RGB_cont = "001" else
+			   x"F920" when RGB_cont = "010" else
+			   x"FA60" when RGB_cont = "011" else
+			   x"FBA8";
 
       	moving_block_x <= block_data_out(7 downto 0) - 1 when rest = '1' and block_data_out(7 downto 0) > to_unsigned(0, 8) 
 			  else block_data_out(7 downto 0) + 1 when rest = '0' and block_data_out(7 downto 0) + block_data_out(24 downto 17)< to_unsigned(240, 8) 
@@ -356,10 +377,10 @@ begin
 	
 --MAPEO DE SALIDAS	
 	
-	r_rgb_int <= x"0000" when select_draw_r_rgb="00" else
+	r_rgb_int <= x"1801" when select_draw_r_rgb="00" else
 		     block_data_out(49 downto 34) when select_draw_r_rgb="01" else
 		     unsigned(fifo_view_data(49 downto 34)) when select_draw_r_rgb="10" else
-		     x"0000";
+		     x"1801";
 	r_RGB <= r_rgb_int;
 	r_width <= unsigned(fifo_view_data(24 downto 17)) when select_draw_r_width='1' else block_data_out(24 downto 17);
 	y_pos   <= unsigned(queue_y_count_value) when select_draw_y_pos='1' else
@@ -470,7 +491,8 @@ fifo_view_read <= '1' when epres=e2r or epres=e15r or epres=e18r else '0';
 clr_draw_queue_idx <= '1' when epres=e2s else '0';
 inc_draw_queue_idx <= '1' when epres=e2n else '0';
 
-ld_lvl_count <= '1' when epres=init_q0 else '0';
+ld_lvl_count <= '1' when epres=inicio and push_button_rise='1' else '0';
+ld_rgb_count <= '1' when epres=inicio and push_button_rise='1' else '0';
 load_block_data <= '1' when epres=e0 or epres=e3 or epres=e9 or epres=e15 or epres=e18 else '0';
 load_r_desp <= '1' when epres=e4 else '0';
 desp_izq <= '1' when epres=e5 else '0';
