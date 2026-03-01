@@ -468,7 +468,7 @@ begin
 			when e16q => esig <= e16;
 			when e16 => esig <= e0;
 			when e18s => esig <= e18r;
-			when e18r => esig <= e18;
+			when e18r => esig <= e18v;
 			when e18v => if fifo_view_data_valid='1' then esig <= e18;
 				     else esig <= e18v;
 				     end if;
