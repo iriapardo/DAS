@@ -107,7 +107,6 @@ architecture rtl of DE10_Standard_xxx is
   port(
     reset, clk          : in std_logic;
     push_button         : in std_logic;
-    --push_button_2       : in std_logic;
     draw_rect_done_rect : in std_logic;
 
     x_pos    : out unsigned(7 downto 0);
@@ -208,7 +207,6 @@ begin
     clk   => clk,
     reset => reset,
     push_button => s_space_detected or not(KEY(1)),
-    --push_button_2 => s_space_detected,
     draw_rect_done_rect => done_rect,
 
     x_pos    => s_x_pos,
@@ -264,13 +262,5 @@ begin
     hex => std_logic_vector(s_lvl_tens),
     dig => HEX1
   );
-
-  -- Debug opcional
-  LEDR(0) <= init_done;
-  LEDR(1) <= s_delegate_draw;
-  LEDR(2) <= done_rect;
-  LEDR(3) <= s_space_detected;
-  LEDR(4) <= UART_RX;
-  LEDR(9 downto 5) <= (others => '0');
 
 end rtl;

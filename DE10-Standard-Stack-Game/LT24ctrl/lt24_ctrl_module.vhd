@@ -35,7 +35,6 @@ architecture arch_lcd_ctrl of lcd_ctrl is
 	signal ry_row: unsigned (n downto 0); 
 	signal r_rgb: unsigned (m - 1 downto 0); 
 
-	--signal num_pix: unsigned (m downto 0);
 	signal dec_pix: std_logic;
 	signal end_pix: std_logic;
 	signal rem_pix: unsigned (m downto 0);
@@ -58,7 +57,7 @@ architecture arch_lcd_ctrl of lcd_ctrl is
 
 begin 
 
--- REGISTROS XCOL, YROW, RGB
+
 
 	REG_XCOL: process(clk, reset, xcol, ld_cursor)
 	begin	
@@ -182,7 +181,6 @@ process (epres, lcd_init_done, op_setcursor, op_drawcolour, end_pix, q_dat)
 		end case;
 	end process;
 
----sentencias de asignacion concurrente para cada se�al de control
 cl_lcd_data<='1' when epres=e0 or epres=e1 or epres=e14 else '0';
 ld_cursor<='1' when epres=e1 else '0';
 cl_dat<='1' when epres=e1 else '0';

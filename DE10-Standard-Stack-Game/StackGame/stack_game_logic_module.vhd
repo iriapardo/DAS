@@ -6,7 +6,6 @@ entity stack_game_logic is
   port (
 		reset, clk: in std_logic;
 		push_button: in std_logic;
-		--push_button_2: in std_logic;
 		draw_rect_done_rect: in std_logic;
 		
 		x_pos: out unsigned (7 downto 0);
@@ -154,9 +153,7 @@ architecture arch_stack_game_logic of stack_game_logic is
 	signal clr_draw_queue_idx: std_logic;
 	signal inc_draw_queue_idx: std_logic;
 	signal push_button_d: std_logic;
-	--signal push_button_2: std_logic;
 	signal push_button_rise: std_logic;
-	--signal push_button_2_rise: std_logic;
 	signal button_detected: std_logic;
 	
 
@@ -341,15 +338,13 @@ begin
 	begin
 		if reset='1' then
 			push_button_d <= '0';
-			--push_button_2 <= '0';
 		elsif clk'event and clk='1' then
 			push_button_d <= push_button;
-			--push_button_2_d <= push_button_2;
 		end if;
 	end process;
 
 	push_button_rise <= push_button and not push_button_d;
-	--push_button_2_rise <= push_button_2 and not push_button_2_d;
+
 
 -- COMPONENTES DE RECORTE
 

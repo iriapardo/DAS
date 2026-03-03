@@ -28,9 +28,7 @@ end FIFO_queue;
 
 architecture arch_FIFO_queue of FIFO_queue is
 
-    ------------------------------------------------------------------
-    -- RAM
-    ------------------------------------------------------------------
+
     component RAM_module is
         port(
             address : in  std_logic_vector(4 downto 0);
@@ -42,9 +40,7 @@ architecture arch_FIFO_queue of FIFO_queue is
         );
     end component;
 
-    ------------------------------------------------------------------
-    -- Señales internas
-    ------------------------------------------------------------------
+
     signal head       : unsigned(3 downto 0) := (others => '0');
     signal tail       : unsigned(3 downto 0) := (others => '0');
     signal view_ptr   : unsigned(3 downto 0) := (others => '0');
@@ -58,9 +54,7 @@ architecture arch_FIFO_queue of FIFO_queue is
 
     signal view_read_d : std_logic := '0';
 
-    ------------------------------------------------------------------
-    -- Funciones módulo 11
-    ------------------------------------------------------------------
+
     function next11(x : unsigned(3 downto 0)) return unsigned is
     begin
         if x = to_unsigned(10,4) then
@@ -81,9 +75,7 @@ architecture arch_FIFO_queue of FIFO_queue is
 
 begin
 
-    ------------------------------------------------------------------
-    -- INSTANCIA RAM
-    ------------------------------------------------------------------
+
     u_ram : RAM_module
         port map(
             address => ram_addr,
@@ -94,18 +86,13 @@ begin
             q       => ram_q
         );
 
-    ------------------------------------------------------------------
-    -- SALIDAS DE ESTADO
-    ------------------------------------------------------------------
+
     empty <= '1' when elem_count = 0  else '0';
     full  <= '1' when elem_count = 11 else '0';
     count <= elem_count;
 
     view_data <= ram_q;
 
-    ------------------------------------------------------------------
-    -- REG_HEAD
-    ------------------------------------------------------------------
     REG_HEAD: process(clk, rst)
     begin
         if rst = '1' or clear_queue = '1' then
@@ -117,9 +104,6 @@ begin
         end if;
     end process;
 
-    ------------------------------------------------------------------
-    -- REG_TAIL
-    ------------------------------------------------------------------
     REG_TAIL: process(clk, rst)
     begin
         if rst = '1' or clear_queue = '1' then
@@ -131,9 +115,7 @@ begin
         end if;
     end process;
 
-    ------------------------------------------------------------------
-    -- REG_VIEW_PTR
-    ------------------------------------------------------------------
+
     REG_VIEW_PTR: process(clk, rst)
     begin
         if rst = '1' or clear_queue = '1' then
@@ -157,9 +139,7 @@ begin
         end if;
     end process;
 
-    ------------------------------------------------------------------
-    -- CONT_ELEM_COUNT
-    ------------------------------------------------------------------
+
     CONT_ELEM_COUNT: process(clk, rst)
     begin
         if rst = '1' or clear_queue = '1' then
@@ -177,9 +157,7 @@ begin
         end if;
     end process;
 
-    ------------------------------------------------------------------
-    -- REG_VIEW_VALID
-    ------------------------------------------------------------------
+
     REG_VIEW_VALID: process(clk, rst)
     begin
         if rst = '1' or clear_queue = '1' then
@@ -191,9 +169,7 @@ begin
         end if;
     end process;
 
-    ------------------------------------------------------------------
-    -- CONTROL RAM (CONCURRENTE)
-    ------------------------------------------------------------------
+
     ram_wren <= '1' when enqueue = '1' and elem_count < 11 else '0';
 
     ram_rden <= '1' when view_read = '1' else '0';
