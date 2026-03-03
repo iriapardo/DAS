@@ -239,6 +239,8 @@ begin
 	lvl_count_tens <= resize(lvl_count_value / 10, lvl_count_tens'length);
 	lvl_count_units <= resize(lvl_count_value mod 10, lvl_count_units'length);
 
+-- CONTADOR DE Y DE COLA PARA DIBUJADO CORRECTO DE ELEMENTOS DE LA COLA
+
 	CONT_QUEUE_Y: process(clk, reset, ld_queue_y_count, decr_queue_y_count, queue_y_count_value)
 	begin
 		if reset='1' then
@@ -251,7 +253,7 @@ begin
 		end if;
 	end process;
 
--- SUM/REST POSICI�N0
+-- CONTADOR PARA CAMBIO DE COLOR DEL BLOQUE EN MOVIMIENTO
 	CONT_RGB: process(clk, reset, ld_rgb_count, incr_rgb_cont, RGB_cont, rgb_dir_up)
 	begin
 		if reset='1' then
@@ -319,7 +321,7 @@ begin
 	
 	rest <= dir;
 	
--- OTROS
+-- 
 
 	process (clk, reset)
 	begin
@@ -334,6 +336,7 @@ begin
 		end if;
 	end process;
 
+	-- DETECCIÓN DE FLANCO DE PULSADOR
 	process (clk, reset)
 	begin
 		if reset='1' then
@@ -504,7 +507,7 @@ select_draw_y_pos <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_width <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_height <= '1' when epres=e2d or epres=e2w else '0';
 select_draw_r_rgb <= "10" when epres=e2d or epres=e2w else
-		       "01" when epres=e10 or epres=e1 or epres=e2d or epres=e2w or epres=e11 or epres=e15 or epres=e18 else
+		       "01" when epres=e10 or epres=e1 or epres=e11 or epres=e15 or epres=e18 else
 		       "00";
 
 sel_block_data <= "10" when epres=e0 else
